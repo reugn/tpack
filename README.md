@@ -1,4 +1,6 @@
 # packer
+[![GoDoc](https://godoc.org/github.com/reugn/packer?status.svg)](https://godoc.org/github.com/reugn/packer)
+[![Go Report Card](https://goreportcard.com/badge/github.com/reugn/packer)](https://goreportcard.com/report/github.com/reugn/packer)
 
 Run Go code as a Unix pipeline command
 
