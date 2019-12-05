@@ -11,7 +11,7 @@ func TestPacker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to execute command: %s", cmd)
 	}
-	assertEqual(t, "2", string(out[:]))
+	assertEqual(t, "1", string(out[:]))
 }
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
