@@ -55,7 +55,7 @@ func (p Packer) Execute() {
 		}
 	}
 	if p.Reduce != nil {
-		outStr := []byte(p.Reduce(r))
+		outStr := p.Reduce(r)
 		stdout.Write([]byte(outStr))
 	}
 }
