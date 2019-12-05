@@ -20,7 +20,7 @@ abc
 def
 +baz
 ```
-db.json
+db.json (to mock a database)
 ```json
 {
     "foo": "1",
