@@ -1,4 +1,7 @@
 # tpack
+[![Test Status](https://github.com/reugn/tpack/workflows/Test/badge.svg)](https://github.com/reugn/tpack/actions?query=workflow%3ATest)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/reugn/tpack)](https://pkg.go.dev/github.com/reugn/tpack)
+[![Go Report Card](https://goreportcard.com/badge/github.com/reugn/tpack)](https://goreportcard.com/report/github.com/reugn/tpack)
 
 Pack a Go workflow/function as a Unix-style pipeline command.
 
