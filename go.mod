@@ -1,3 +1,3 @@
-module github.com/reugn/packer
+module github.com/reugn/tpack
 
-go 1.12
+go 1.15

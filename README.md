@@ -1,56 +1,31 @@
-# packer
-[![GoDoc](https://godoc.org/github.com/reugn/packer?status.svg)](https://godoc.org/github.com/reugn/packer)
-[![Go Report Card](https://goreportcard.com/badge/github.com/reugn/packer)](https://goreportcard.com/report/github.com/reugn/packer)
+# tpack
 
-Run Go code as a Unix pipeline command
+Pack a Go workflow/function as a Unix-style pipeline command.
+
+![tpack](./docs/images/tpack.png)
 
 > [Wiki](https://en.wikipedia.org/wiki/Pipeline_(Unix))  
 > In Unix-like computer operating systems, a pipeline is a mechanism for inter-process communication using message passing. A pipeline is a set of processes chained together by their standard streams, so that the output text of each process (stdout) is passed directly as input (stdin) to the next one.
 
-Using shell a lot, processing logs or automating various things and awk/sed are not enough? Utilize packer to write simple go applications that act as a Unix pipeline commands and get all benefits using channels, goroutines, regular expressions and more!
+Use `tpack` to write Go applications that act as pipeline commands.
+Employ channels, goroutines, regular expressions and more to build powerful concurrent workflows.
 
-## Usage
-Simple etl example (from examples folder)
-
-input.txt
-```
-abc
-+foo
-+bar
-def
-+baz
-```
-db.json (to mock a database)
-```json
-{
-    "foo": "1",
-    "bar": "2",
-    "baz": "3"
-}
-```
+## Examples
+See ETL workflow in the examples folder.
 ```go
+package main
+
+import "github.com/reugn/tpack"
+
 func main() {
-	var db map[string]string
-	f, _ := ioutil.ReadFile("db.json")
-	json.Unmarshal(f, &db)
-	packer.Packer{
-		Filter: func(s string) bool {
-			return strings.HasPrefix(s, "+")
-		},
-		Map: func(s string) string {
-			s = strings.Replace(s, "+", "", 1)
-			return fmt.Sprintf("%s -> %s", s, db[s])
-		},
-		Reduce: packer.MkString(", "),
-	}.Execute()
+	tpack.NewPackerStd(tpack.NewFunctionProcessor(
+		doETL,
+	)).Execute()
 }
 ```
-```
-cat input.txt | go run ./etl.go
-```
-Result:
-```
-foo -> 1, bar -> 2, baz -> 3
+Test command
+```sh
+cat input.txt | go run *.go 2>/dev/null | wc -l
 ```
 
 ## License
