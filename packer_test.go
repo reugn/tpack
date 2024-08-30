@@ -14,15 +14,15 @@ func TestPacker(t *testing.T) {
 	var out bytes.Buffer
 	var err bytes.Buffer
 
-	tpack.NewPacker(in, &out, &err, tpack.NewFunctionProcessor(
+	tpack.NewPacker(in, &out, &err, tpack.NewProcessor(
 		func(in []byte) ([][]byte, error) {
-			var res [][]byte
-			s := string(in)
-			_, err := strconv.ParseFloat(s, 64)
+			var result [][]byte
+			str := string(in)
+			_, err := strconv.Atoi(str)
 			if err != nil {
-				return nil, errors.New(s)
+				return nil, errors.New(str)
 			}
-			return append(res, []byte(s)), nil
+			return append(result, []byte(str)), nil
 		},
 	)).Execute()
 
@@ -30,7 +30,7 @@ func TestPacker(t *testing.T) {
 	assertEqual(t, err.String(), "a\nb\nc\n")
 }
 
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
+func assertEqual(t *testing.T, a, b any) {
 	if a != b {
 		t.Fatalf("%s != %s", a, b)
 	}

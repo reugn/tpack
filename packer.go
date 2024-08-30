@@ -2,116 +2,138 @@ package tpack
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"sync"
 )
 
-// Packer is the representation of a packed processing unit.
+// Packer facilitates writing programs that manipulate text streams, a
+// fundamental concept in the Unix philosophy. It enables seamless data
+// transfer between processes, allowing the output of one process to be
+// used as input for another.
 type Packer struct {
-	sync.WaitGroup
+	wg        sync.WaitGroup
 	in        io.Reader
 	out       io.Writer
 	err       io.Writer
 	processor Processor
-	validate  func()
+	options   *packerOpts
 }
 
-// NewPacker returns a new Packer.
-func NewPacker(in io.Reader, out io.Writer, err io.Writer, processor Processor) *Packer {
+// packerOpts provides additional configuration properties to Packer.
+type packerOpts struct {
+	errWriteFunc func(error)
+}
+
+// newPackerOptsDefault returns a new packerOpts with default values.
+func newPackerOptsDefault() *packerOpts {
+	return &packerOpts{
+		errWriteFunc: func(err error) { panic(err) },
+	}
+}
+
+// PackerOpt represents a customization option to configure a packer.
+type PackerOpt func(*packerOpts)
+
+// WithErrWriteHandler configures a custom error handler for writing to err.
+// The default error handler will panic on an error.
+func WithErrWriteHandler(f func(error)) PackerOpt {
+	return func(opts *packerOpts) {
+		opts.errWriteFunc = f
+	}
+}
+
+// NewPacker returns a new [Packer] using custom communication channels.
+func NewPacker(in io.Reader, out, err io.Writer, processor Processor,
+	opts ...PackerOpt) *Packer {
+	options := newPackerOptsDefault()
+
+	// apply specified options
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	return &Packer{
 		in:        in,
 		out:       out,
 		err:       err,
 		processor: processor,
-		validate:  nil,
+		options:   options,
 	}
 }
 
-// NewPackerStdOut returns a new Packer with the standard output and standard error
-// as output communication channels and the specified input io.Reader.
-func NewPackerStdOut(in io.Reader, processor Processor) *Packer {
-	return &Packer{
-		in:        in,
-		out:       os.Stdout,
-		err:       os.Stderr,
-		processor: processor,
-		validate:  nil,
-	}
+// NewPackerStdOut returns a new [Packer] that uses the standard output and
+// error streams as output channels and the provided [io.Reader] as the
+// input communication channel.
+func NewPackerStdOut(in io.Reader, processor Processor,
+	opts ...PackerOpt) *Packer {
+	return NewPacker(in, os.Stdout, os.Stderr, processor, opts...)
 }
 
-// NewPackerStd returns a new Packer with the standard streams as communication channels.
-func NewPackerStd(processor Processor) *Packer {
-	stdin := os.Stdin
-	stdout := os.Stdout
-	stderr := os.Stderr
-
-	validate := func() {
-		info, err := stdin.Stat()
-		if err != nil {
-			stderr.Write([]byte(err.Error()))
-			os.Exit(-1)
-		}
-		if info.Mode()&os.ModeNamedPipe == 0 {
-			stderr.Write([]byte("named pipe (FIFO)"))
-			os.Exit(-1)
-		}
-	}
-
-	return &Packer{
-		in:        stdin,
-		out:       stdout,
-		err:       stderr,
-		processor: processor,
-		validate:  validate,
-	}
+// NewPackerStd returns a new [Packer] that uses the standard input, output,
+// and error streams as communication channels.
+func NewPackerStd(processor Processor, opts ...PackerOpt) *Packer {
+	return NewPackerStdOut(os.Stdin, processor, opts...)
 }
 
-// Execute starts processing the incoming messages.
+// Execute starts processing data stream.
 func (p *Packer) Execute() {
-	if p.validate != nil {
-		p.validate()
-	}
-
+	p.wg.Add(2)
 	go p.writeOut()
 	go p.writeErr()
-	p.Add(2)
 
+	// Read newline-delimited lines of text from the input reader.
+	// In a Unix pipeline, the input text stream is delimited by a newline
+	// character. Each line of input is passed as a separate argument
+	// to the subsequent commands in the pipeline.
 	scanner := bufio.NewScanner(p.in)
+
 	for scanner.Scan() {
-		p.processor.InChannel() <- scanner.Bytes()
+		p.processor.InChan() <- scanner.Bytes()
 	}
-	close(p.processor.InChannel())
-	p.Wait()
+
+	// check for scanner error
+	if scanner.Err() != nil {
+		p.processor.ErrChan() <- scanner.Err()
+	}
+
+	close(p.processor.InChan())
+	p.wg.Wait()
 }
 
+// writeOut processes the output channel.
 func (p *Packer) writeOut() {
-	for message := range p.processor.OutChannel() {
+	for message := range p.processor.OutChan() {
 		_, err := p.out.Write(lf(message))
 		if err != nil {
-			p.handleErrorOnWrite(err)
+			p.handleOutWriteError(fmt.Errorf("%w: %s", err, string(message)))
 		}
 	}
-	p.Done()
+	p.wg.Done()
 }
 
+// writeErr processes the error channel.
 func (p *Packer) writeErr() {
-	for message := range p.processor.ErrChannel() {
-		_, err := p.err.Write(lf(message))
-		if err != nil {
-			p.handleErrorOnWrite(err)
+	for err := range p.processor.ErrChan() {
+		_, werr := p.err.Write(lf([]byte(err.Error())))
+		if werr != nil {
+			p.options.errWriteFunc(fmt.Errorf("%w: %w", werr, err))
 		}
 	}
-	p.Done()
+	p.wg.Done()
 }
 
-func (p *Packer) handleErrorOnWrite(err error) {
-	_, err = p.err.Write(lf([]byte(err.Error())))
-	if err != nil {
-		os.Exit(-1)
+// handleOutWriteError attempts to write the error using the error writer.
+// If it fails, it will utilize the function from options to manage the error.
+func (p *Packer) handleOutWriteError(err error) {
+	_, werr := p.err.Write(lf([]byte(err.Error())))
+	if werr != nil {
+		p.options.errWriteFunc(fmt.Errorf("%w: %w", werr, err))
 	}
 }
 
+// lf appends a newline that has been trimmed by the scanner.
 func lf(bytes []byte) []byte {
 	return append(bytes, '\n')
 }
