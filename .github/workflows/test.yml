@@ -1,19 +1,27 @@
 name: Test
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - master
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [1.14.x, 1.15.x]
+        go-version: [1.18.x]
     steps:
     - name: Setup Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
+
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
+
     - name: Test
       run: go test ./...
