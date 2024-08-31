@@ -1,2 +1,2 @@
-// Package tpack provides tools to pack a Go workflow as a Unix-style pipeline command.
+// Package tpack provides tools to package Go workflows as Unix-style pipeline commands.
 package tpack
