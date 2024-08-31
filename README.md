@@ -1,9 +1,9 @@
 # tpack
-[![Test Status](https://github.com/reugn/tpack/workflows/Test/badge.svg)](https://github.com/reugn/tpack/actions?query=workflow%3ATest)
+[![Test](https://github.com/reugn/tpack/actions/workflows/test.yml/badge.svg)](https://github.com/reugn/tpack/actions/workflows/test.yml)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/reugn/tpack)](https://pkg.go.dev/github.com/reugn/tpack)
 [![Go Report Card](https://goreportcard.com/badge/github.com/reugn/tpack)](https://goreportcard.com/report/github.com/reugn/tpack)
 
-Pack a Go workflow/function as a Unix-style pipeline command.
+Pack a Go workflow/function into a Unix-style pipeline command.
 
 ![tpack](./docs/images/tpack.png)
 
@@ -13,19 +13,21 @@ Pack a Go workflow/function as a Unix-style pipeline command.
 Use `tpack` to write Go applications that act as pipeline commands.
 Employ channels, goroutines, regular expressions and more to build powerful concurrent workflows.
 
-## Examples
-See ETL workflow in the examples folder.
+## Usage
+See the ETL workflow in the [examples](examples) folder.
+
 ```go
 package main
 
 import "github.com/reugn/tpack"
 
 func main() {
-	tpack.NewPackerStd(tpack.NewFunctionProcessor(
+	tpack.NewPackerStd(tpack.NewProcessor(
 		doETL,
 	)).Execute()
 }
 ```
+
 Test command
 ```sh
 cat input.txt | go run *.go 2>/dev/null | wc -l
