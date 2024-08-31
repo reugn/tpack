@@ -1,3 +1,3 @@
 module github.com/reugn/tpack
 
-go 1.18
+go 1.20
